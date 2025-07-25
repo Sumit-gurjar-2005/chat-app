@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chat | ChatSphere</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="chat-page">
+  <div class="chat-container">
+    <header>
+      <h2>💬 ChatSphere</h2>
+    </header>
+
+    <div id="chat-box" class="chat-box"></div>
+
+    <form id="chat-form" enctype="multipart/form-data">
+      <input type="text" id="message" placeholder="Type a message..." autocomplete="off" required />
+      <input type="file" id="media" accept="image/*" />
+      <button type="submit" class="btn send-btn">Send</button>
+      
+
+    </form>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/chat.js"></script>
+</body>
+</html>
