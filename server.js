@@ -48,6 +48,7 @@ app.use('/', authRoutes);
 app.use('/chat', chatRoutes);
 app.use('/friend',friendRoutes);
 app.use('/private-chat', privateChatRoutes);
+app.use('/friend', friendRoutes);
 
 
 // ✅ Dashboard route
@@ -107,8 +108,8 @@ socket.on('privateMessage', ({ sender, receiver, message }) => {
 
 });
 
-const friendRoutes = require('./routes/friend');
-app.use('/friend', friendRoutes);
+//const friendRoutes = require('./routes/friend');
+
 
 
 app.get('/friends', (req, res) => {
