@@ -13,6 +13,7 @@ const authRoutes = require('./routes/auth');
 const chatRoutes = require('./routes/chat');
 const Message = require('./models/Message');
 const privateChatRoutes = require('./routes/privateChat');
+const friendRoutes=require('./routes/friend');
 
 const app = express();
 const server = http.createServer(app);
