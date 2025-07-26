@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 
-// Send friend request
+// ✅ Send friend request
 router.post('/send', async (req, res) => {
   const { fromId, toId } = req.body;
 
@@ -10,13 +10,17 @@ router.post('/send', async (req, res) => {
     const fromUser = await User.findById(fromId);
     const toUser = await User.findById(toId);
 
-    if (!toUser.friendRequests.includes(fromId)) {
-      toUser.friendRequests.push(fromId);
+    if (!fromUser || !toUser) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    if (!toUser.friendRequests.includes(fromUser._id)) {
+      toUser.friendRequests.push(fromUser._id);
       await toUser.save();
     }
 
-    if (!fromUser.sentRequests.includes(toId)) {
-      fromUser.sentRequests.push(toId);
+    if (!fromUser.sentRequests.includes(toUser._id)) {
+      fromUser.sentRequests.push(toUser._id);
       await fromUser.save();
     }
 
@@ -26,7 +30,7 @@ router.post('/send', async (req, res) => {
   }
 });
 
-// Accept friend request
+// ✅ Accept friend request
 router.post('/accept', async (req, res) => {
   const { userId, requesterId } = req.body;
 
@@ -34,11 +38,20 @@ router.post('/accept', async (req, res) => {
     const user = await User.findById(userId);
     const requester = await User.findById(requesterId);
 
-    user.friends.push(requesterId);
-    requester.friends.push(userId);
+    if (!user || !requester) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
 
-    user.friendRequests = user.friendRequests.filter(id => id != requesterId);
-    requester.sentRequests = requester.sentRequests.filter(id => id != userId);
+    if (!user.friends.includes(requester._id)) {
+      user.friends.push(requester._id);
+    }
+
+    if (!requester.friends.includes(user._id)) {
+      requester.friends.push(user._id);
+    }
+
+    user.friendRequests = user.friendRequests.filter(id => id.toString() !== requesterId);
+    requester.sentRequests = requester.sentRequests.filter(id => id.toString() !== userId);
 
     await user.save();
     await requester.save();
@@ -49,7 +62,7 @@ router.post('/accept', async (req, res) => {
   }
 });
 
-// Reject friend request
+// ✅ Reject friend request
 router.post('/reject', async (req, res) => {
   const { userId, requesterId } = req.body;
 
@@ -57,8 +70,12 @@ router.post('/reject', async (req, res) => {
     const user = await User.findById(userId);
     const requester = await User.findById(requesterId);
 
-    user.friendRequests = user.friendRequests.filter(id => id != requesterId);
-    requester.sentRequests = requester.sentRequests.filter(id => id != userId);
+    if (!user || !requester) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    user.friendRequests = user.friendRequests.filter(id => id.toString() !== requesterId);
+    requester.sentRequests = requester.sentRequests.filter(id => id.toString() !== userId);
 
     await user.save();
     await requester.save();
@@ -69,7 +86,7 @@ router.post('/reject', async (req, res) => {
   }
 });
 
-// Cancel sent friend request
+// ✅ Cancel sent request
 router.post('/cancel', async (req, res) => {
   const { fromId, toId } = req.body;
 
@@ -77,8 +94,12 @@ router.post('/cancel', async (req, res) => {
     const fromUser = await User.findById(fromId);
     const toUser = await User.findById(toId);
 
-    fromUser.sentRequests = fromUser.sentRequests.filter(id => id != toId);
-    toUser.friendRequests = toUser.friendRequests.filter(id => id != fromId);
+    if (!fromUser || !toUser) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    fromUser.sentRequests = fromUser.sentRequests.filter(id => id.toString() !== toId);
+    toUser.friendRequests = toUser.friendRequests.filter(id => id.toString() !== fromId);
 
     await fromUser.save();
     await toUser.save();
