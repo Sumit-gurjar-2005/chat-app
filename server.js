@@ -1,6 +1,21 @@
 console.log("server file executed");
+require('dotenv').config();
+
 
 const express = require('express');
+const app = express();
+
+function isAuthenticated(req, res, next) {
+  if (req.session && req.session.user) {
+    return next();
+  } else {
+    return res.redirect('/login');
+  }
+}
+
+
+
+
 const mongoose = require('mongoose');
 const session = require('express-session');
 const sharedSession = require('express-socket.io-session');
@@ -12,10 +27,21 @@ require('dotenv').config();
 const authRoutes = require('./routes/auth');
 const chatRoutes = require('./routes/chat');
 const Message = require('./models/Message');
-const privateChatRoutes = require('./routes/privateChat');
+const privateChatRoutes = require('./routes/private-chat');
+
+//const privateChatRoutes = require('./routes/private-chat');
+console.log("privateChatRoutes:", privateChatRoutes); // Test print
+
+app.use('/private-chat', privateChatRoutes);
+
+
+
 const friendRoutes=require('./routes/friend');
 
-const app = express();
+
+
+
+
 const server = http.createServer(app);
 const io = socketio(server);
 
@@ -46,8 +72,11 @@ app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 // ✅ Routes
 app.use('/', authRoutes);
 app.use('/chat', chatRoutes);
-//app.use('/friend',friendRoutes);
+
+//console.log("privateChatRoutes",privateChatRoutes);
 app.use('/private-chat', privateChatRoutes);
+
+//console.log('friendRoutes is:',friendRoutes);
 app.use('/friend', friendRoutes);
 
 
