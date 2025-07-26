@@ -81,6 +81,10 @@ io.on('connection', (socket) => {
   });
 });
 
+const friendRoutes = require('./routes/friend');
+app.use('/friend', friendRoutes);
+
+
 // ✅ Start Server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
