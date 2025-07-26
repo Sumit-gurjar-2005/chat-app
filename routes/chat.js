@@ -6,6 +6,7 @@ const multer = require('multer');
 const fs = require('fs');
 const Message = require('../models/Message');
 
+
 // Middleware to check login
 function isAuthenticated(req, res, next) {
   if (req.session && req.session.user) {

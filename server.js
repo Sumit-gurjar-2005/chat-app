@@ -12,6 +12,7 @@ require('dotenv').config();
 const authRoutes = require('./routes/auth');
 const chatRoutes = require('./routes/chat');
 const Message = require('./models/Message');
+const privateChatRoutes = require('./routes/privateChat');
 
 const app = express();
 const server = http.createServer(app);
@@ -44,6 +45,17 @@ app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 // ✅ Routes
 app.use('/', authRoutes);
 app.use('/chat', chatRoutes);
+app.use('/friend',friendRoutes);
+app.use('/private-chat', privateChatRoutes);
+
+
+// ✅ Dashboard route
+app.get('/dashboard', (req, res) => {
+  if (!req.session.user) {
+    return res.redirect('/login');
+  }
+  res.sendFile(path.join(__dirname, 'views', 'dashboard.html'));
+});
 
 // ✅ Socket.io chat handling
 io.on('connection', (socket) => {
@@ -79,6 +91,19 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('🔴 User disconnected');
   });
+
+  socket.on('joinPrivateRoom', ({ sender, receiver }) => {
+  const room = [sender, receiver].sort().join('-');
+  socket.join(room);
+});
+
+socket.on('privateMessage', ({ sender, receiver, message }) => {
+  const room = [sender, receiver].sort().join('-');
+  io.to(room).emit('privateMessage', { sender, message });
+});
+
+
+
 });
 
 const friendRoutes = require('./routes/friend');
@@ -104,6 +129,10 @@ app.get('/users', async (req, res) => {
 app.get('/users/:id', async (req, res) => {
   const user = await User.findById(req.params.id, "_id username");
   res.json(user);
+});
+
+app.get('/private-chat/:friendUsername', isAuthenticated, (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'private-chat.html'));
 });
 
 

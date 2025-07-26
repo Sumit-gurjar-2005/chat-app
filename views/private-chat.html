@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Private Chat</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <h2>Private Chat with <span id="friend-name"></span></h2>
+
+  <div id="chat-box" style="height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;"></div>
+
+  <form id="chat-form">
+    <input type="text" id="message-input" placeholder="Type a message" autocomplete="off" />
+    <button type="submit">Send</button>
+  </form>
+
+  <script>
+    const loggedInUser = localStorage.getItem('username');
+    const friend = new URLSearchParams(window.location.search).get('friend');
+
+    if (!loggedInUser || !friend) {
+      alert('Missing user or friend name');
+      window.location.href = '/dashboard'; // redirect back
+    }
+
+    document.getElementById('friend-name').textContent = friend;
+
+    const socket = io();
+
+    // Join a private room
+    socket.emit('joinPrivateRoom', { sender: loggedInUser, receiver: friend });
+
+    // Fetch previous messages
+    fetch(`/private-chat/chat/${loggedInUser}/${friend}`)
+      .then(res => res.json())
+      .then(data => {
+        const chatBox = document.getElementById('chat-box');
+        data.forEach(msg => {
+          const msgDiv = document.createElement('div');
+          msgDiv.textContent = `${msg.sender}: ${msg.message}`;
+          chatBox.appendChild(msgDiv);
+        });
+      });
+
+    // Send message
+    const chatForm = document.getElementById('chat-form');
+    chatForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const messageInput = document.getElementById('message-input');
+      const message = messageInput.value;
+      if (!message.trim()) return;
+
+      const payload = { sender: loggedInUser, receiver: friend, message };
+
+      // Save to DB
+      await fetch('/private-chat/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      // Emit via socket
+      socket.emit('privateMessage', payload);
+
+      messageInput.value = '';
+    });
+
+    // Receive message
+    socket.on('privateMessage', ({ sender, message }) => {
+      const chatBox = document.getElementById('chat-box');
+      const msgDiv = document.createElement('div');
+      msgDiv.textContent = `${sender}: ${message}`;
+      chatBox.appendChild(msgDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
+  </script>
+</body>
+</html>

@@ -45,7 +45,7 @@ router.post('/login', async (req, res) => {
     if (!isMatch) return res.send('Wrong password. <a href="/login">Try again</a>');
 
     req.session.user = user;
-    res.redirect('/chat');
+    res.redirect('/dashboard');
   } catch (err) {
     res.status(500).send('Login failed. ' + err.message);
   }
