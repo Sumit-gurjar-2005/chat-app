@@ -85,6 +85,28 @@ const friendRoutes = require('./routes/friend');
 app.use('/friend', friendRoutes);
 
 
+app.get('/friends', (req, res) => {
+  if (!req.session.userId) return res.redirect('/login');
+  res.sendFile(__dirname + '/views/friends.html');
+});
+
+app.get('/get-current-user', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: "Not logged in" });
+  const user = await User.findById(req.session.userId);
+  res.json(user);
+});
+
+app.get('/users', async (req, res) => {
+  const users = await User.find({}, "_id username");
+  res.json(users);
+});
+
+app.get('/users/:id', async (req, res) => {
+  const user = await User.findById(req.params.id, "_id username");
+  res.json(user);
+});
+
+
 // ✅ Start Server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
