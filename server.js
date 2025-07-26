@@ -46,7 +46,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 // ✅ Routes
 app.use('/', authRoutes);
 app.use('/chat', chatRoutes);
-app.use('/friend',friendRoutes);
+//app.use('/friend',friendRoutes);
 app.use('/private-chat', privateChatRoutes);
 app.use('/friend', friendRoutes);
 
