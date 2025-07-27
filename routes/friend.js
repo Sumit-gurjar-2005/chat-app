@@ -1,6 +1,3 @@
-router.get('/test', (req, res) => {
-  res.send('Friend route working!');
-});
 
 
 
@@ -10,6 +7,12 @@ router.get('/test', (req, res) => {
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
+
+
+router.get('/test', (req, res) => {
+  res.send('Friend route working!');
+});
+
 
 // Send friend request
 router.post('/send-request', async (req, res) => {
