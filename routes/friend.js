@@ -2,87 +2,80 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
+const mongoose = require('mongoose');
+
+const FriendRequest = mongoose.model('FriendRequest', new mongoose.Schema({
+  from: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  to: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  status: String // pending, accepted, rejected
+}));
 
 // Send friend request
 router.post('/send-request', async (req, res) => {
-  const { receiverId } = req.body;
-  const senderId = req.session.userId;
+  const from = req.session.userId;
+  const to = req.body.to;
 
-  if (!senderId) return res.status(401).json({ message: 'Unauthorized' });
+  const alreadyExists = await FriendRequest.findOne({ from, to });
+  if (alreadyExists) return res.status(400).json({ message: 'Request already sent' });
 
-  const sender = await User.findById(senderId);
-  const receiver = await User.findById(receiverId);
-
-  if (!sender || !receiver) return res.status(404).json({ message: 'User not found' });
-
-  if (
-    receiver.friendRequests.includes(senderId) ||
-    sender.sentRequests.includes(receiverId)
-  ) {
-    return res.status(400).json({ message: 'Request already sent' });
-  }
-
-  receiver.friendRequests.push(senderId);
-  sender.sentRequests.push(receiverId);
-
-  await receiver.save();
-  await sender.save();
-
+  const newRequest = new FriendRequest({ from, to, status: 'pending' });
+  await newRequest.save();
   res.json({ message: 'Friend request sent' });
 });
 
-// Cancel request
+// Cancel friend request
 router.post('/cancel-request', async (req, res) => {
-  const { receiverId } = req.body;
-  const senderId = req.session.userId;
+  const from = req.session.userId;
+  const to = req.body.to;
 
-  const sender = await User.findById(senderId);
-  const receiver = await User.findById(receiverId);
-
-  receiver.friendRequests = receiver.friendRequests.filter(id => id != senderId);
-  sender.sentRequests = sender.sentRequests.filter(id => id != receiverId);
-
-  await receiver.save();
-  await sender.save();
-
-  res.json({ message: 'Request cancelled' });
+  await FriendRequest.findOneAndDelete({ from, to, status: 'pending' });
+  res.json({ message: 'Request canceled' });
 });
 
-// Accept request
+// Accept friend request
 router.post('/accept-request', async (req, res) => {
-  const { senderId } = req.body;
-  const receiverId = req.session.userId;
+  const to = req.session.userId;
+  const from = req.body.from;
 
-  const sender = await User.findById(senderId);
-  const receiver = await User.findById(receiverId);
-
-  receiver.friendRequests = receiver.friendRequests.filter(id => id != senderId);
-  sender.sentRequests = sender.sentRequests.filter(id => id != receiverId);
-
-  receiver.friends.push(senderId);
-  sender.friends.push(receiverId);
-
-  await receiver.save();
-  await sender.save();
-
+  await FriendRequest.findOneAndUpdate({ from, to, status: 'pending' }, { status: 'accepted' });
   res.json({ message: 'Friend request accepted' });
 });
 
-// Reject request
+// Reject friend request
 router.post('/reject-request', async (req, res) => {
-  const { senderId } = req.body;
-  const receiverId = req.session.userId;
+  const to = req.session.userId;
+  const from = req.body.from;
 
-  const sender = await User.findById(senderId);
-  const receiver = await User.findById(receiverId);
-
-  receiver.friendRequests = receiver.friendRequests.filter(id => id != senderId);
-  sender.sentRequests = sender.sentRequests.filter(id => id != receiverId);
-
-  await receiver.save();
-  await sender.save();
-
+  await FriendRequest.findOneAndUpdate({ from, to, status: 'pending' }, { status: 'rejected' });
   res.json({ message: 'Friend request rejected' });
+});
+
+// ✅ All data for current user
+router.get('/all', async (req, res) => {
+  const currentUser = req.session.userId;
+  if (!currentUser) return res.status(401).json({ message: 'Unauthorized' });
+
+  const allUsers = await User.find({ _id: { $ne: currentUser } });
+
+  const sent = await FriendRequest.find({ from: currentUser, status: 'pending' }).populate('to');
+  const received = await FriendRequest.find({ to: currentUser, status: 'pending' }).populate('from');
+  const friends = await FriendRequest.find({
+    $or: [{ from: currentUser }, { to: currentUser }],
+    status: 'accepted'
+  }).populate('from to');
+
+  const sentRequests = sent.map(req => req.to);
+  const receivedRequests = received.map(req => req.from);
+  const friendsList = friends.map(req =>
+    String(req.from._id) === currentUser ? req.to : req.from
+  );
+
+  res.json({
+    allUsers,
+    sentRequests,
+    receivedRequests,
+    friends: friendsList
+  });
 });
 
 module.exports = router;
