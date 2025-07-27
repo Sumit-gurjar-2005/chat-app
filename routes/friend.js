@@ -1,112 +1,102 @@
+// routes/friend.js
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 
-// ✅ Send friend request
-router.post('/send', async (req, res) => {
-  const { fromId, toId } = req.body;
+// Send friend request
+router.post('/send-request', async (req, res) => {
+  const { receiverId } = req.body;
+  const senderId = req.session.userId;
+
+  if (!senderId) return res.status(401).json({ message: 'Unauthorized' });
 
   try {
-    const fromUser = await User.findById(fromId);
-    const toUser = await User.findById(toId);
+    const sender = await User.findById(senderId);
+    const receiver = await User.findById(receiverId);
 
-    if (!fromUser || !toUser) {
-      return res.status(404).json({ success: false, error: 'User not found' });
+    if (!sender || !receiver) return res.status(404).json({ message: 'User not found' });
+
+    if (
+      sender.sentRequests.includes(receiverId) ||
+      sender.friends.includes(receiverId)
+    ) {
+      return res.status(400).json({ message: 'Already sent or already friends' });
     }
 
-    if (!toUser.friendRequests.includes(fromUser._id)) {
-      toUser.friendRequests.push(fromUser._id);
-      await toUser.save();
-    }
+    sender.sentRequests.push(receiverId);
+    receiver.friendRequests.push(senderId);
 
-    if (!fromUser.sentRequests.includes(toUser._id)) {
-      fromUser.sentRequests.push(toUser._id);
-      await fromUser.save();
-    }
+    await sender.save();
+    await receiver.save();
 
-    res.json({ success: true, message: 'Friend request sent.' });
+    res.status(200).json({ message: 'Friend request sent' });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
-// ✅ Accept friend request
-router.post('/accept', async (req, res) => {
-  const { userId, requesterId } = req.body;
+// Cancel friend request
+router.post('/cancel-request', async (req, res) => {
+  const { receiverId } = req.body;
+  const senderId = req.session.userId;
+
+  if (!senderId) return res.status(401).json({ message: 'Unauthorized' });
 
   try {
-    const user = await User.findById(userId);
-    const requester = await User.findById(requesterId);
+    await User.findByIdAndUpdate(senderId, {
+      $pull: { sentRequests: receiverId }
+    });
+    await User.findByIdAndUpdate(receiverId, {
+      $pull: { friendRequests: senderId }
+    });
 
-    if (!user || !requester) {
-      return res.status(404).json({ success: false, error: 'User not found' });
-    }
-
-    if (!user.friends.includes(requester._id)) {
-      user.friends.push(requester._id);
-    }
-
-    if (!requester.friends.includes(user._id)) {
-      requester.friends.push(user._id);
-    }
-
-    user.friendRequests = user.friendRequests.filter(id => id.toString() !== requesterId);
-    requester.sentRequests = requester.sentRequests.filter(id => id.toString() !== userId);
-
-    await user.save();
-    await requester.save();
-
-    res.json({ success: true, message: 'Friend request accepted.' });
+    res.status(200).json({ message: 'Friend request cancelled' });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
-// ✅ Reject friend request
-router.post('/reject', async (req, res) => {
-  const { userId, requesterId } = req.body;
+// Accept friend request
+router.post('/accept-request', async (req, res) => {
+  const { senderId } = req.body;
+  const receiverId = req.session.userId;
+
+  if (!receiverId) return res.status(401).json({ message: 'Unauthorized' });
 
   try {
-    const user = await User.findById(userId);
-    const requester = await User.findById(requesterId);
+    await User.findByIdAndUpdate(receiverId, {
+      $pull: { friendRequests: senderId },
+      $push: { friends: senderId }
+    });
+    await User.findByIdAndUpdate(senderId, {
+      $pull: { sentRequests: receiverId },
+      $push: { friends: receiverId }
+    });
 
-    if (!user || !requester) {
-      return res.status(404).json({ success: false, error: 'User not found' });
-    }
-
-    user.friendRequests = user.friendRequests.filter(id => id.toString() !== requesterId);
-    requester.sentRequests = requester.sentRequests.filter(id => id.toString() !== userId);
-
-    await user.save();
-    await requester.save();
-
-    res.json({ success: true, message: 'Friend request rejected.' });
+    res.status(200).json({ message: 'Friend request accepted' });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
-// ✅ Cancel sent request
-router.post('/cancel', async (req, res) => {
-  const { fromId, toId } = req.body;
+// Reject friend request
+router.post('/reject-request', async (req, res) => {
+  const { senderId } = req.body;
+  const receiverId = req.session.userId;
+
+  if (!receiverId) return res.status(401).json({ message: 'Unauthorized' });
 
   try {
-    const fromUser = await User.findById(fromId);
-    const toUser = await User.findById(toId);
+    await User.findByIdAndUpdate(receiverId, {
+      $pull: { friendRequests: senderId }
+    });
+    await User.findByIdAndUpdate(senderId, {
+      $pull: { sentRequests: receiverId }
+    });
 
-    if (!fromUser || !toUser) {
-      return res.status(404).json({ success: false, error: 'User not found' });
-    }
-
-    fromUser.sentRequests = fromUser.sentRequests.filter(id => id.toString() !== toId);
-    toUser.friendRequests = toUser.friendRequests.filter(id => id.toString() !== fromId);
-
-    await fromUser.save();
-    await toUser.save();
-
-    res.json({ success: true, message: 'Friend request cancelled.' });
+    res.status(200).json({ message: 'Friend request rejected' });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
