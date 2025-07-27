@@ -1,3 +1,11 @@
+router.get('/test', (req, res) => {
+  res.send('Friend route working!');
+});
+
+
+
+
+
 // routes/friend.js
 const express = require('express');
 const router = express.Router();

@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function sendRequest(userId) {
-    await fetch("/friend/send", {
+    await fetch("/friend/send-request", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ receiverId: userId }),
@@ -40,7 +40,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function cancelRequest(userId) {
-    await fetch("/friend/cancel", {
+    await fetch("/friend/cancel-request", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ receiverId: userId }),
@@ -49,7 +49,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function acceptRequest(userId) {
-    await fetch("/friend/accept", {
+    await fetch("/friend/accept-request", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ senderId: userId }),
@@ -58,7 +58,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function rejectRequest(userId) {
-    await fetch("/friend/reject", {
+    await fetch("/friend/reject-request", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ senderId: userId }),
