@@ -28,7 +28,7 @@ router.post('/signup', async (req, res) => {
     const newUser = new User({ username, password });
     await newUser.save();
     req.session.user = newUser;
-    res.redirect('/chat');
+    res.redirect('/login');
   } catch (err) {
     res.status(500).send('Signup failed. ' + err.message);
   }
@@ -45,6 +45,9 @@ router.post('/login', async (req, res) => {
     if (!isMatch) return res.send('Wrong password. <a href="/login">Try again</a>');
 
     req.session.user = user;
+    req.session.userId = user._id;
+
+    
     res.redirect('/dashboard');
   } catch (err) {
     res.status(500).send('Login failed. ' + err.message);
