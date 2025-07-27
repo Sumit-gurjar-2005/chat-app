@@ -13,10 +13,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     userList.innerHTML = "";
 
     users.forEach((user) => {
-      if (user._id !== currentUser._id &&
-          !currentUser.friends.includes(user._id) &&
-          !currentUser.friendRequests.includes(user._id) &&
-          !currentUser.sentRequests.includes(user._id)) {
+      if (
+        user._id !== currentUser._id &&
+        !currentUser.friends.includes(user._id) &&
+        !currentUser.friendRequests.includes(user._id) &&
+        !currentUser.sentRequests.includes(user._id)
+      ) {
         const li = document.createElement("li");
         li.textContent = user.username;
         const btn = document.createElement("button");
@@ -29,7 +31,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function sendRequest(userId) {
-    await fetch("/friend/send-request", {
+    await fetch("/friend/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ receiverId: userId }),
@@ -38,7 +40,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function cancelRequest(userId) {
-    await fetch("/friend/cancel-request", {
+    await fetch("/friend/cancel", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ receiverId: userId }),
@@ -47,7 +49,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function acceptRequest(userId) {
-    await fetch("/friend/accept-request", {
+    await fetch("/friend/accept", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ senderId: userId }),
@@ -56,7 +58,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function rejectRequest(userId) {
-    await fetch("/friend/reject-request", {
+    await fetch("/friend/reject", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ senderId: userId }),
@@ -69,10 +71,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Incoming requests
     const incoming = await Promise.all(
-      userData.friendRequests.map(id => fetch(`/users/${id}`).then(res => res.json()))
+      userData.friendRequests.map((id) =>
+        fetch(`/users/${id}`).then((res) => res.json())
+      )
     );
     incomingList.innerHTML = "";
-    incoming.forEach(user => {
+    incoming.forEach((user) => {
       const li = document.createElement("li");
       li.textContent = user.username;
       const accept = document.createElement("button");
@@ -87,10 +91,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Sent requests
     const sent = await Promise.all(
-      userData.sentRequests.map(id => fetch(`/users/${id}`).then(res => res.json()))
+      userData.sentRequests.map((id) =>
+        fetch(`/users/${id}`).then((res) => res.json())
+      )
     );
     sentList.innerHTML = "";
-    sent.forEach(user => {
+    sent.forEach((user) => {
       const li = document.createElement("li");
       li.textContent = user.username;
       const cancel = document.createElement("button");
@@ -102,10 +108,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Friends list
     const friends = await Promise.all(
-      userData.friends.map(id => fetch(`/users/${id}`).then(res => res.json()))
+      userData.friends.map((id) =>
+        fetch(`/users/${id}`).then((res) => res.json())
+      )
     );
     friendList.innerHTML = "";
-    friends.forEach(user => {
+    friends.forEach((user) => {
       const li = document.createElement("li");
       li.textContent = user.username;
       friendList.appendChild(li);
