@@ -1,140 +1,139 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Friend System</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>User Section</title>
   <link rel="stylesheet" href="/css/style.css" />
-  <style>
-    body { font-family: Arial; padding: 20px; }
-    .user-box { margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 6px; }
-    .user-box button { margin-left: 10px; }
-    .section-title { margin-top: 30px; font-size: 1.3rem; border-bottom: 1px solid #999; padding-bottom: 4px; }
-    .top-bar { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-    .top-bar span { font-weight: bold; }
-    .back-btn { background-color: #444; color: white; padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; }
-  </style>
 </head>
 <body>
-  <div class="top-bar">
-    <span id="current-user">Logged in as: ...</span>
-    <button class="back-btn" onclick="window.location.href='/dashboard'">⬅ Back to Dashboard</button>
-  </div>
+  <div class="container">
+    <h1>User Section</h1>
 
-  <h1>👥 Friend System</h1>
+    <section>
+      <h2>All Users</h2>
+      <ul id="all-users"></ul>
+    </section>
 
-  <div>
-    <h3 class="section-title">All Users</h3>
-    <div id="all-users"></div>
-  </div>
+    <section>
+      <h2>Friend Requests Sent</h2>
+      <ul id="sent-requests"></ul>
+    </section>
 
-  <div>
-    <h3 class="section-title">Pending Friend Requests</h3>
-    <div id="pending-requests"></div>
-  </div>
+    <section>
+      <h2>Friend Requests Received</h2>
+      <ul id="received-requests"></ul>
+    </section>
 
-  <div>
-    <h3 class="section-title">Your Friends</h3>
-    <div id="accepted-friends"></div>
+    <section>
+      <h2>Your Friends</h2>
+      <ul id="friends-list"></ul>
+    </section>
   </div>
 
   <script>
-    let currentUser = null;
-
-    async function getCurrentUser() {
-      try {
-        const res = await fetch('/get-current-user');
-        if (!res.ok) {
-          alert("⚠️ Session expired. Please log in again.");
-          window.location.href = '/login';
-          return null;
-        }
-        const user = await res.json();
-        document.getElementById('current-user').innerText = "Logged in as: " + user.username;
-        return user;
-      } catch (err) {
-        alert("Error getting user");
-        return null;
-      }
-    }
-
-    async function loadUsers() {
-      currentUser = await getCurrentUser();
-      if (!currentUser) return;
-
-      const res = await fetch('/users');
-      const users = await res.json();
-
-      const allUsersDiv = document.getElementById('all-users');
-      const pendingDiv = document.getElementById('pending-requests');
-      const acceptedDiv = document.getElementById('accepted-friends');
-
-      allUsersDiv.innerHTML = '';
-      pendingDiv.innerHTML = '';
-      acceptedDiv.innerHTML = '';
-
-      users.forEach(user => {
-  if (user._id === currentUser._id) return; // skip self
-
-  const div = document.createElement('div');
-  div.className = 'user-box';
-  div.innerHTML = `<strong>${user.username}</strong>`;
-
-  const isFriend = currentUser.friends.includes(user._id);
-  const hasSentRequest = currentUser.sentRequests.includes(user._id);
-  const hasReceivedRequest = currentUser.friendRequests.includes(user._id);
-
-  if (isFriend) {
-    div.innerHTML += `<button onclick="startPrivateChat('${user._id}', '${user.username}')">Chat</button>`;
-    acceptedDiv.appendChild(div);
-  } else if (hasReceivedRequest) {
-    div.innerHTML += `
-      <button onclick="respondRequest('${user._id}', 'accept')">Accept</button>
-      <button onclick="respondRequest('${user._id}', 'reject')">Reject</button>`;
-    pendingDiv.appendChild(div);
-  } else if (hasSentRequest) {
-    div.innerHTML += `<button onclick="cancelRequest('${user._id}')">Cancel Request</button>`;
-    pendingDiv.appendChild(div);
-  } else {
-    div.innerHTML += `<button onclick="sendRequest('${user._id}')">Send Request</button>`;
-    allUsersDiv.appendChild(div);
-      }
-    });
-
-    }
-
-    async function sendRequest(id) {
-      await fetch('/friend/send-request', {
+    async function sendRequest(toUserId) {
+      const response = await fetch(window.location.origin + '/friend/send-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetId: id })
+        body: JSON.stringify({ to: toUserId })
       });
-      loadUsers();
+      const result = await response.json();
+      alert(result.message);
+      loadAllUsers();
     }
 
-    async function cancelRequest(id) {
-      await fetch('/friend/cancel-request', {
+    async function cancelRequest(toUserId) {
+      const response = await fetch(window.location.origin + '/friend/cancel-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetId: id })
+        body: JSON.stringify({ to: toUserId })
       });
-      loadUsers();
+      const result = await response.json();
+      alert(result.message);
+      loadAllUsers();
     }
 
-    async function respondRequest(id, action) {
-      const url = action === 'accept' ? '/friend/accept-request' : '/friend/reject-request';
-      await fetch(url, {
+    async function acceptRequest(fromUserId) {
+      const response = await fetch(window.location.origin + '/friend/accept-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requesterId: id })
+        body: JSON.stringify({ from: fromUserId })
       });
-      loadUsers();
+      const result = await response.json();
+      alert(result.message);
+      loadAllUsers();
     }
 
-    function startPrivateChat(id, username) {
-      alert(`(🔜 Coming soon) Start private chat with ${username}`);
+    async function rejectRequest(fromUserId) {
+      const response = await fetch(window.location.origin + '/friend/reject-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: fromUserId })
+      });
+      const result = await response.json();
+      alert(result.message);
+      loadAllUsers();
     }
 
-    loadUsers();
+    async function loadAllUsers() {
+      const res = await fetch(window.location.origin + '/friend/all');
+      const data = await res.json();
+      const allUsersList = document.getElementById('all-users');
+      const sentList = document.getElementById('sent-requests');
+      const receivedList = document.getElementById('received-requests');
+      const friendsList = document.getElementById('friends-list');
+
+      allUsersList.innerHTML = '';
+      sentList.innerHTML = '';
+      receivedList.innerHTML = '';
+      friendsList.innerHTML = '';
+
+      data.allUsers.forEach(user => {
+        const li = document.createElement('li');
+        li.textContent = user.username;
+        const btn = document.createElement('button');
+        btn.textContent = 'Send Friend Request';
+        btn.onclick = () => sendRequest(user._id);
+        li.appendChild(btn);
+        allUsersList.appendChild(li);
+      });
+
+      data.sentRequests.forEach(user => {
+        const li = document.createElement('li');
+        li.textContent = user.username;
+        const btn = document.createElement('button');
+        btn.textContent = 'Cancel Request';
+        btn.onclick = () => cancelRequest(user._id);
+        li.appendChild(btn);
+        sentList.appendChild(li);
+      });
+
+      data.receivedRequests.forEach(user => {
+        const li = document.createElement('li');
+        li.textContent = user.username;
+
+        const acceptBtn = document.createElement('button');
+        acceptBtn.textContent = 'Accept';
+        acceptBtn.onclick = () => acceptRequest(user._id);
+
+        const rejectBtn = document.createElement('button');
+        rejectBtn.textContent = 'Reject';
+        rejectBtn.onclick = () => rejectRequest(user._id);
+
+        li.appendChild(acceptBtn);
+        li.appendChild(rejectBtn);
+        receivedList.appendChild(li);
+      });
+
+      data.friends.forEach(user => {
+        const li = document.createElement('li');
+        li.textContent = user.username;
+        friendsList.appendChild(li);
+      });
+    }
+
+    window.onload = loadAllUsers;
   </script>
 </body>
 </html>
