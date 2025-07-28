@@ -55,6 +55,8 @@ app.use('/', authRoutes);
 app.use('/chat', chatRoutes);
 app.use('/private-chat', privateChatRoutes);
 app.use('/friend', friendRoutes);
+app.use('/auth', authRoutes);
+
 
 // ✅ Auth Middleware
 function isAuthenticated(req, res, next) {
