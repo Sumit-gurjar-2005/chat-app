@@ -1,61 +1,117 @@
 const socket = io();
-const messagesList = document.getElementById('messages');
-const form = document.getElementById('chat-form');
-const input = document.getElementById('messageInput');
-const chatHeader = document.getElementById('chat-header');
-
 const urlParams = new URLSearchParams(window.location.search);
-const friendId = urlParams.get('friendId');
+const friendId = urlParams.get("friendId");
+let currentUser;
 
-let currentUser = null;
+const chatHeader = document.getElementById("chat-header");
+const messagesContainer = document.getElementById("messages");
+const chatForm = document.getElementById("chat-form");
+const messageInput = document.getElementById("messageInput");
+const mediaInput = document.getElementById("mediaInput");
 
-// Fetch current user
-async function getCurrentUser() {
-  const res = await fetch(window.location.origin + '/auth/current-user');
-  const data = await res.json();
-  if (data.success) {
-    currentUser = data.user;
-    setupPrivateChat();
-  } else {
-    alert("You must be logged in.");
-    window.location.href = '/login';
-  }
-}
-
-// Setup private chat logic
-function setupPrivateChat() {
-  socket.emit('join-private-room', { userId: currentUser._id, friendId });
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const text = input.value.trim();
-    if (text === '') return;
-
-    socket.emit('private-message', {
-      senderId: currentUser._id,
-      receiverId: friendId,
-      text
-    });
-
-    appendMessage({ text, senderId: currentUser._id }, true);
-    input.value = '';
-  });
-
-  socket.on('private-message', (msg) => {
-    if (msg.senderId === friendId) {
-      appendMessage(msg, false);
+// Get current user
+fetch("/auth/current-user")
+  .then((res) => res.json())
+  .then((data) => {
+    if (!data.success) {
+      alert("Please log in first.");
+      window.location.href = "/login";
+    } else {
+      currentUser = data.user;
+      getFriendName();
+      loadMessages();
     }
   });
+
+// Get friend name to show in header
+function getFriendName() {
+  fetch(`/friend/user/${friendId}`)
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.success && data.user) {
+        chatHeader.innerText = `Chat with ${data.user.username}`;
+      }
+    });
 }
 
-// Display message in UI
-function appendMessage(msg, isSelf) {
-  const li = document.createElement('li');
-  li.classList.add('message');
-  if (isSelf) li.classList.add('self');
-  li.innerText = msg.text;
-  messagesList.appendChild(li);
-  messagesList.scrollTop = messagesList.scrollHeight;
+// Load message history
+function loadMessages() {
+  fetch(`/private-chat/messages/${friendId}`)
+    .then((res) => res.json())
+    .then((messages) => {
+      messagesContainer.innerHTML = "";
+      messages.forEach((msg) => displayMessage(msg, msg.sender === currentUser._id));
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    });
 }
 
-getCurrentUser();
+// Display a message in chat
+function displayMessage(message, isSelf) {
+  const li = document.createElement("li");
+  li.classList.add("message");
+  if (isSelf) li.classList.add("self");
+
+  if (message.message) {
+    li.innerHTML = `<p>${message.message}</p>`;
+  }
+
+  if (message.media) {
+    const mediaUrl = `/uploads/${message.media}`;
+    if (message.media.endsWith(".mp4") || message.media.endsWith(".webm")) {
+      const video = document.createElement("video");
+      video.src = mediaUrl;
+      video.controls = true;
+      li.appendChild(video);
+    } else {
+      const img = document.createElement("img");
+      img.src = mediaUrl;
+      li.appendChild(img);
+    }
+  }
+
+  messagesContainer.appendChild(li);
+}
+
+// Handle sending message
+chatForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const formData = new FormData();
+  formData.append("to", friendId);
+
+  if (messageInput.value.trim()) {
+    formData.append("message", messageInput.value.trim());
+  }
+
+  if (mediaInput.files[0]) {
+    formData.append("media", mediaInput.files[0]);
+  }
+
+  const res = await fetch("/private-chat/send", {
+    method: "POST",
+    body: formData,
+  });
+
+  const data = await res.json();
+
+  if (data.success && data.message) {
+    displayMessage(data.message, true);
+    socket.emit("private-message", {
+      to: friendId,
+      message: data.message,
+    });
+    messageInput.value = "";
+    mediaInput.value = "";
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  } else {
+    alert("Message failed to send.");
+  }
+});
+
+// Receive incoming message via socket
+socket.on("private-message", (data) => {
+  if (data.message.sender === friendId) {
+    displayMessage(data.message, false);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+});

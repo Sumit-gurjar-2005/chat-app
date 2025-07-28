@@ -135,24 +135,25 @@ io.on('connection', (socket) => {
         media: newMsg.media
       });
     } catch (err) {
-      console.error("❌ Error saving message:", err);
+      console.error("❌ Error saving public message:", err);
     }
   });
 
-  // Private chat
-  socket.on('joinPrivateRoom', ({ sender, receiver }) => {
-    const room = [sender, receiver].sort().join('-');
+  // Private chat: join room
+  socket.on('join-private-room', ({ userId, friendId }) => {
+    const room = [userId, friendId].sort().join('-');
     socket.join(room);
   });
 
-  socket.on('privateMessage', async ({ sender, receiver, message, media }) => {
-    const room = [sender, receiver].sort().join('-');
+  // Private chat: message
+  socket.on('private-message', async ({ senderId, receiverId, text, media }) => {
+    const room = [senderId, receiverId].sort().join('-');
 
     try {
       const privateMsg = new PrivateMessage({
-        sender,
-        receiver,
-        message,
+        sender: senderId,
+        receiver: receiverId,
+        message: text,
         media,
         timestamp: new Date()
       });
@@ -160,20 +161,20 @@ io.on('connection', (socket) => {
       await privateMsg.save();
 
       // Deliver to receiver if online
-      const receiverSocketId = onlineUsers.get(receiver);
+      const receiverSocketId = onlineUsers.get(receiverId);
       if (receiverSocketId) {
-        io.to(receiverSocketId).emit('privateMessage', {
-          sender,
-          message,
+        io.to(receiverSocketId).emit('private-message', {
+          senderId,
+          text,
           media,
           timestamp: privateMsg.timestamp
         });
       }
 
-      // Send back to sender as confirmation
-      socket.emit('privateMessage', {
-        sender,
-        message,
+      // Send to sender (confirmation)
+      socket.emit('private-message', {
+        senderId,
+        text,
         media,
         timestamp: privateMsg.timestamp
       });
@@ -190,6 +191,7 @@ io.on('connection', (socket) => {
     }
   });
 });
+
 
 // ✅ Start Server
 const PORT = process.env.PORT || 5000;
