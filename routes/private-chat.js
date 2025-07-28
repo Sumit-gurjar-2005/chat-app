@@ -1,46 +1,38 @@
-//console.log("hi");
-
+// routes/private-chat.js
 const express = require('express');
 const router = express.Router();
 const PrivateMessage = require('../models/PrivateMessage');
 const User = require('../models/User');
 
-// Send private message
-router.post('/send', async (req, res) => {
-  try {
-    const { senderId, receiverId, text, media } = req.body;
+// Get chat history with a friend
+router.get('/chat/:friendId', async (req, res) => {
+  const currentUser = req.session.userId;
+  const friendId = req.params.friendId;
 
-    const newMessage = new PrivateMessage({
-      sender: senderId,
-      receiver: receiverId,
-      text,
-      media: media || ''
-    });
+  if (!currentUser) return res.status(401).json({ error: 'Unauthorized' });
 
-    await newMessage.save();
+  const messages = await PrivateMessage.find({
+    $or: [
+      { from: currentUser, to: friendId },
+      { from: friendId, to: currentUser }
+    ]
+  }).sort({ createdAt: 1 });
 
-    res.status(200).json({ success: true, message: 'Message sent' });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Failed to send message' });
-  }
+  res.json(messages);
 });
 
-// Fetch chat between two users
-router.get('/chat/:user1/:user2', async (req, res) => {
-  try {
-    const { user1, user2 } = req.params;
+// Send a new private message
+router.post('/chat/:friendId', async (req, res) => {
+  const from = req.session.userId;
+  const to = req.params.friendId;
+  const { content } = req.body;
 
-    const messages = await PrivateMessage.find({
-      $or: [
-        { sender: user1, receiver: user2 },
-        { sender: user2, receiver: user1 }
-      ]
-    }).sort({ timestamp: 1 });
+  if (!from || !to || !content) return res.status(400).json({ error: 'Missing fields' });
 
-    res.status(200).json({ success: true, messages });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Failed to fetch messages' });
-  }
+  const newMessage = new PrivateMessage({ from, to, content });
+  await newMessage.save();
+
+  res.json({ success: true, message: 'Message sent' });
 });
 
 module.exports = router;

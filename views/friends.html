@@ -127,10 +127,19 @@
       });
 
       data.friends.forEach(user => {
-        const li = document.createElement('li');
-        li.textContent = user.username;
-        friendsList.appendChild(li);
-      });
+  const li = document.createElement('li');
+  li.textContent = user.username + ' ';
+
+  const chatBtn = document.createElement('button');
+  chatBtn.textContent = 'Chat';
+  chatBtn.onclick = () => {
+    window.location.href = '/private-chat.html?friendId=' + user._id;
+  };
+
+  li.appendChild(chatBtn);
+  friendsList.appendChild(li);
+  });
+
     }
 
     window.onload = loadAllUsers;

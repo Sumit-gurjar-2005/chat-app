@@ -1,80 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Private Chat</title>
-  <link rel="stylesheet" href="/styles.css" />
-  <script src="/socket.io/socket.io.js"></script>
+  <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-  <h2>Private Chat with <span id="friend-name"></span></h2>
-
-  <div id="chat-box" style="height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;"></div>
-
-  <form id="chat-form">
-    <input type="text" id="message-input" placeholder="Type a message" autocomplete="off" />
-    <button type="submit">Send</button>
-  </form>
+  <div class="container">
+    <h2>Private Chat</h2>
+    <div id="chat-box" class="chat-box"></div>
+    <form id="chat-form">
+      <input type="text" id="chat-input" placeholder="Type your message..." required />
+      <button type="submit">Send</button>
+    </form>
+  </div>
 
   <script>
-    const loggedInUser = localStorage.getItem('username');
-    const friend = new URLSearchParams(window.location.search).get('friend');
+    const urlParams = new URLSearchParams(window.location.search);
+    const friendId = urlParams.get('friendId');
+    const chatBox = document.getElementById('chat-box');
+    const chatForm = document.getElementById('chat-form');
+    const chatInput = document.getElementById('chat-input');
 
-    if (!loggedInUser || !friend) {
-      alert('Missing user or friend name');
-      window.location.href = '/dashboard'; // redirect back
+    async function loadMessages() {
+      const res = await fetch(window.location.origin + '/private-chat/chat/' + friendId);
+      const messages = await res.json();
+
+      chatBox.innerHTML = '';
+      messages.forEach(msg => {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'message';
+        msgDiv.textContent = msg.from === friendId ? 'Friend: ' + msg.content : 'You: ' + msg.content;
+        chatBox.appendChild(msgDiv);
+      });
+
+      chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    document.getElementById('friend-name').textContent = friend;
-
-    const socket = io();
-
-    // Join a private room
-    socket.emit('joinPrivateRoom', { sender: loggedInUser, receiver: friend });
-
-    // Fetch previous messages
-    fetch(`/private-chat/chat/${loggedInUser}/${friend}`)
-      .then(res => res.json())
-      .then(data => {
-        const chatBox = document.getElementById('chat-box');
-        data.forEach(msg => {
-          const msgDiv = document.createElement('div');
-          msgDiv.textContent = `${msg.sender}: ${msg.message}`;
-          chatBox.appendChild(msgDiv);
-        });
-      });
-
-    // Send message
-    const chatForm = document.getElementById('chat-form');
     chatForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const messageInput = document.getElementById('message-input');
-      const message = messageInput.value;
-      if (!message.trim()) return;
-
-      const payload = { sender: loggedInUser, receiver: friend, message };
-
-      // Save to DB
-      await fetch('/private-chat/send', {
+      const content = chatInput.value;
+      await fetch(window.location.origin + '/private-chat/chat/' + friendId, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ content })
       });
-
-      // Emit via socket
-      socket.emit('privateMessage', payload);
-
-      messageInput.value = '';
+      chatInput.value = '';
+      loadMessages(); // refresh chat
     });
 
-    // Receive message
-    socket.on('privateMessage', ({ sender, message }) => {
-      const chatBox = document.getElementById('chat-box');
-      const msgDiv = document.createElement('div');
-      msgDiv.textContent = `${sender}: ${message}`;
-      chatBox.appendChild(msgDiv);
-      chatBox.scrollTop = chatBox.scrollHeight;
-    });
+    window.onload = loadMessages;
   </script>
 </body>
 </html>
