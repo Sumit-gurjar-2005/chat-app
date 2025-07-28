@@ -3,53 +3,93 @@
 <head>
   <meta charset="UTF-8">
   <title>Private Chat</title>
-  <link rel="stylesheet" href="/css/style.css" />
-</head>
-<body>
-  <div class="container">
-    <h2>Private Chat</h2>
-    <div id="chat-box" class="chat-box"></div>
-    <form id="chat-form">
-      <input type="text" id="chat-input" placeholder="Type your message..." required />
-      <button type="submit">Send</button>
-    </form>
-  </div>
-
-  <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const friendId = urlParams.get('friendId');
-    const chatBox = document.getElementById('chat-box');
-    const chatForm = document.getElementById('chat-form');
-    const chatInput = document.getElementById('chat-input');
-
-    async function loadMessages() {
-      const res = await fetch(window.location.origin + '/private-chat/chat/' + friendId);
-      const messages = await res.json();
-
-      chatBox.innerHTML = '';
-      messages.forEach(msg => {
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'message';
-        msgDiv.textContent = msg.from === friendId ? 'Friend: ' + msg.content : 'You: ' + msg.content;
-        chatBox.appendChild(msgDiv);
-      });
-
-      chatBox.scrollTop = chatBox.scrollHeight;
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body {
+      background-color: #1e1e2f;
+      color: #f5f5f5;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      margin: 0;
     }
 
-    chatForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const content = chatInput.value;
-      await fetch(window.location.origin + '/private-chat/chat/' + friendId, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content })
-      });
-      chatInput.value = '';
-      loadMessages(); // refresh chat
-    });
+    header {
+      background-color: #282a36;
+      padding: 1rem;
+      text-align: center;
+      font-size: 1.2rem;
+    }
 
-    window.onload = loadMessages;
-  </script>
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .message {
+      padding: 10px;
+      background: #44475a;
+      border-radius: 10px;
+      max-width: 70%;
+    }
+
+    .message.self {
+      align-self: flex-end;
+      background-color: #6272a4;
+    }
+
+    form {
+      display: flex;
+      gap: 0.5rem;
+      padding: 1rem;
+      background: #282a36;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+    }
+
+    button {
+      padding: 10px 15px;
+      background: #50fa7b;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    @media(max-width: 600px) {
+      header {
+        font-size: 1rem;
+      }
+
+      .message {
+        font-size: 0.9rem;
+      }
+
+      form {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header id="chat-header">Chat</header>
+  <ul id="messages"></ul>
+
+  <form id="chat-form">
+    <input type="text" id="messageInput" placeholder="Type a message..." required />
+    <button type="submit">Send</button>
+  </form>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/private-chat.js"></script>
 </body>
 </html>

@@ -47,11 +47,22 @@ router.post('/login', async (req, res) => {
     req.session.user = user;
     req.session.userId = user._id;
 
-    
+
     res.redirect('/dashboard');
   } catch (err) {
     res.status(500).send('Login failed. ' + err.message);
   }
 });
+
+
+
+router.get('/current-user', (req, res) => {
+  if (req.session.user) {
+    res.json({ success: true, user: req.session.user });
+  } else {
+    res.json({ success: false });
+  }
+});
+
 
 module.exports = router;
