@@ -57,7 +57,6 @@ app.use('/private-chat', privateChatRoutes);
 app.use('/friend', friendRoutes);
 app.use('/auth', authRoutes);
 
-
 // ✅ Auth Middleware
 function isAuthenticated(req, res, next) {
   if (req.session && req.session.user) return next();
@@ -100,12 +99,21 @@ app.get('/users/:id', async (req, res) => {
   res.json(user);
 });
 
+// ✅ In-memory online user tracking
+const onlineUsers = new Map(); // userId -> socketId
+
 // ✅ Socket.io Handling
 io.on('connection', (socket) => {
   const session = socket.handshake.session;
+  const userId = session?.user?._id;
   const username = session?.user?.username || 'Anonymous';
 
   console.log("🟢 Socket connected as:", username);
+
+  // Track connected user
+  if (userId) {
+    onlineUsers.set(userId, socket.id);
+  }
 
   // Public chat
   socket.on('chatMessage', async ({ message, media }) => {
@@ -139,7 +147,6 @@ io.on('connection', (socket) => {
 
   socket.on('privateMessage', async ({ sender, receiver, message, media }) => {
     const room = [sender, receiver].sort().join('-');
-    io.to(room).emit('privateMessage', { sender, message, media });
 
     try {
       const privateMsg = new PrivateMessage({
@@ -151,6 +158,26 @@ io.on('connection', (socket) => {
       });
 
       await privateMsg.save();
+
+      // Deliver to receiver if online
+      const receiverSocketId = onlineUsers.get(receiver);
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit('privateMessage', {
+          sender,
+          message,
+          media,
+          timestamp: privateMsg.timestamp
+        });
+      }
+
+      // Send back to sender as confirmation
+      socket.emit('privateMessage', {
+        sender,
+        message,
+        media,
+        timestamp: privateMsg.timestamp
+      });
+
     } catch (err) {
       console.error("❌ Error saving private message:", err);
     }
@@ -158,6 +185,9 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log('🔴 User disconnected');
+    if (userId) {
+      onlineUsers.delete(userId);
+    }
   });
 });
 

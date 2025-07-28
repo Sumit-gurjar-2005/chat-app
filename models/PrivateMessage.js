@@ -1,12 +1,12 @@
 const mongoose = require('mongoose');
 
 const privateMessageSchema = new mongoose.Schema({
-  sender: {
+  from: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
   },
-  receiver: {
+  to: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
@@ -19,10 +19,10 @@ const privateMessageSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
-  timestamp: {
+  createdAt: {
     type: Date,
     default: Date.now,
   }
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('PrivateMessage', privateMessageSchema);
